@@ -4,4 +4,7 @@
     <TargetFramework>net50</TargetFramework>
     <LangVersion>9</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="API\" />
+  </ItemGroup>
 </Project>

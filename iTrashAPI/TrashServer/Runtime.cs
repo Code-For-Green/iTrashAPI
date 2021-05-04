@@ -32,3 +32,6 @@ return;
 
 pass:
 Handler handler = new Handler(config);
+AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
+
+void OnProcessExit(object sender, EventArgs e) => handler.Dispose();
