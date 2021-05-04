@@ -15,19 +15,20 @@ if (!File.Exists(path))
 try
 {
     config = JsonSerializer.Deserialize<Config>(File.ReadAllText(path));
+    if (config is null)
+        Console.WriteLine("Config is empty");
+    else
+        goto pass;
 }
 catch (IOException)
 {
     Console.WriteLine("File is currently handled by another application");
-    return;
 }
 catch (JsonException)
 {
     Console.WriteLine("The file architecture is invalid");
-    return;
 }
-if (config is null)
-{
-    Console.WriteLine("Config is empty");
-    return;
-}
+return;
+
+pass:
+Handler handler = new Handler(config);
