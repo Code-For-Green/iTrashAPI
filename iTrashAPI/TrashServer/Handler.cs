@@ -7,7 +7,7 @@ using Pastel;
 
 namespace TrashServer
 {
-    public class Handler : IDisposable
+    public class Handler
     {
         private const string _dateLogColor = "#28af03";
         private static readonly IReadOnlyDictionary<LogLevel, string> _colors = new Dictionary<LogLevel, string>
@@ -30,24 +30,27 @@ namespace TrashServer
             this.Config = config;
             _commands = new();
             _listenerThread = new(new ThreadStart(ThreadHandler));
+            Log("Server initialized!", LogLevel.Debug);
         }
 
         public void Start()
         {
             IsActive = true;
             _listenerThread.Start();
+            Log("Starting server", LogLevel.Debug);
         }
 
         public void Stop()
         {
             IsActive = false;
-            _listenerThread.Start();
+            Log("Stopping server", LogLevel.Debug);
         }
 
-        public void Dispose()
+        public void Close()
         {
+            Log("Force stopping server!", LogLevel.Debug);
             if (IsActive)
-                _listenerThread.Abort();
+                _listenerThread.Interrupt();
             _commands.Clear();
             Config = null;
         }
@@ -61,13 +64,12 @@ namespace TrashServer
                 Log("Server started!");
                 try
                 {
+                    Log("Waiting for incoming messages", LogLevel.Debug);
                     while (IsActive)
                     {
-                        listener.GetContext();
+                        
+                        listener.BeginGetContext(new AsyncCallback(ListenerCallback),listener).AsyncWaitHandle.WaitOne();
                     }
-                }
-                catch (ThreadAbortException)
-                {
                 }
                 catch (Exception exception)
                 {
@@ -82,6 +84,24 @@ namespace TrashServer
                 }
               
             }
+        }
+
+        private void ListenerCallback(IAsyncResult result)
+        {
+            HttpListener listener = (HttpListener)result.AsyncState;
+            HttpListenerContext context = listener.EndGetContext(result);
+
+            Log("Incoming request from: " + context.Request.RemoteEndPoint, LogLevel.Trace);
+            HttpListenerRequest request = context.Request;
+            HttpListenerResponse response = context.Response;
+
+            string responseString = "<!DOCTYPE html>\n<html>\n<body>\n\tKurwa moje pole\n</body>\n</html>";
+            byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+
+            response.ContentLength64 = buffer.Length;
+            System.IO.Stream output = response.OutputStream;
+            output.Write(buffer, 0, buffer.Length);
+            output.Close();
         }
 
         private void Log(string message, LogLevel log = LogLevel.Info)

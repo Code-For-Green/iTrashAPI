@@ -32,6 +32,13 @@ return;
 
 pass:
 Handler handler = new Handler(config);
+handler.Start();
 AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
+string output;
+while((output = Console.ReadLine()) != "exit")
+{
 
-void OnProcessExit(object sender, EventArgs e) => handler.Dispose();
+}
+handler.Stop();
+
+void OnProcessExit(object sender, EventArgs e) => handler.Close();
