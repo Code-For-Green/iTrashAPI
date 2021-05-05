@@ -8,6 +8,6 @@
         Info = 4,
         Debug = 5,
         Trace = 6,
-        All = 6
+        All = 7
     }
 }
