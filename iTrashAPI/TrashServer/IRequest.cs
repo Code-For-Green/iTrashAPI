@@ -5,6 +5,6 @@ namespace TrashServer
 {
     public interface IRequest
     {
-        public Task Execute(in JsonElement json);
+        public Task Execute(in JsonElement json, out string response);
     }
 }

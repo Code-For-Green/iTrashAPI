@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -21,7 +22,17 @@ namespace TrashServer
             Handler.Logging($"Added {_dictionary.Count} diffrent requests to server", LogLevel.Debug);
         }
 
-        public void FindAttribute(Type[] classes)
+        public bool ContainsKey(string key) => _dictionary.ContainsKey(key);
+
+        public int StartTask(string key, string content, out string response)
+        {
+            Task task = _dictionary[key].Execute(JsonDocument.Parse(content).RootElement, out response);
+            task.Start();
+            task.Wait();
+            return task.IsCompletedSuccessfully ? 200 : 500;
+        }
+
+        private void FindAttribute(Type[] classes)
         {
             foreach(Type classType in classes)
             {

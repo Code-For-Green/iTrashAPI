@@ -1,10 +1,12 @@
 ﻿using System;
+using System.IO;
 using System.Net;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Threading;
 using Pastel;
-using System.Threading.Tasks;
 
 namespace TrashServer
 {
@@ -73,8 +75,8 @@ namespace TrashServer
                     Log("Waiting for incoming messages", LogLevel.Debug);
                     while (IsActive)
                     {
-                        
                         listener.BeginGetContext(new AsyncCallback(ListenerCallback),listener).AsyncWaitHandle.WaitOne();
+                        Log("Next event is preparing", LogLevel.Debug);
                     }
                 }
                 catch (Exception exception)
@@ -88,7 +90,6 @@ namespace TrashServer
                     listener.Close();
                     Log("Thread of Handler finished", LogLevel.Info);
                 }
-              
             }
         }
 
@@ -96,18 +97,50 @@ namespace TrashServer
         {
             HttpListener listener = (HttpListener)result.AsyncState;
             HttpListenerContext context = listener.EndGetContext(result);
-
-            Log("Incoming request from: " + context.Request.RemoteEndPoint, LogLevel.Trace);
             HttpListenerRequest request = context.Request;
             HttpListenerResponse response = context.Response;
-            
-            string responseString = "<!DOCTYPE html>\n<html>\n<body>\n\tKurwa moje pole\n</body>\n</html>";
-            byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+            byte[] buffer = new byte[request.ContentLength64];
+            string responseString = string.Empty;
 
+            Log("Incoming request from: " + context.Request.RemoteEndPoint, LogLevel.Trace);
+            response.StatusCode = (int)CheckRequest(request);
+            if(response.StatusCode == (int)HttpStatusCode.OK)
+            {
+                string key = request.Url.Segments[1];
+                Stream stream = request.InputStream;
+                stream.Read(buffer, 0, buffer.Length);
+                response.StatusCode = RequestService.StartTask(key, request.ContentEncoding.GetString(buffer), out responseString);
+            }
+            if (response.StatusCode != (int)HttpStatusCode.OK)
+                responseString = Enum.GetName((HttpStatusCode)response.StatusCode);
+
+            response.ContentEncoding = Encoding.UTF8;
+            buffer = Encoding.UTF8.GetBytes(responseString);
             response.ContentLength64 = buffer.Length;
-            System.IO.Stream output = response.OutputStream;
+            Stream output = response.OutputStream;
             output.Write(buffer, 0, buffer.Length);
             output.Close();
+        }
+
+        private HttpStatusCode CheckRequest(HttpListenerRequest request)
+        {
+            if (request.ContentType != "application/json")
+            {
+                Log("Bad request content type from: " + request.RemoteEndPoint, LogLevel.Trace);
+                return HttpStatusCode.BadRequest;
+            }
+            if (request.Url.Segments.Length < 2)
+            {
+                Log("Bad request segment lenght type from: " + request.RemoteEndPoint, LogLevel.Trace);
+                return HttpStatusCode.BadRequest;
+            }
+            string key = request.Url.Segments[1];
+            if (!RequestService.ContainsKey(key))
+            {
+                Log("Bad request segment lenght type from: " + request.RemoteEndPoint, LogLevel.Trace);
+                return HttpStatusCode.NotImplemented;
+            }
+            return HttpStatusCode.OK;
         }
 
         private void Log(string message, LogLevel log = LogLevel.Info)
