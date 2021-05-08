@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading;
 using Pastel;
+using System.Threading.Tasks;
 
 namespace TrashServer
 {
@@ -22,8 +23,12 @@ namespace TrashServer
         private readonly ConcurrentQueue<string> _commands;
         private readonly Thread _listenerThread;
 
+        public static LogHandler Logging { get; private set; }
+        public RequestManager RequestService { get; set; }
         public Config Config { get; private set; }
         public bool IsActive { get; private set; }
+
+        public delegate void LogHandler(string message, LogLevel log = LogLevel.Info);
 
         public Handler(Config config)
         {
@@ -31,6 +36,7 @@ namespace TrashServer
             _commands = new();
             _listenerThread = new(new ThreadStart(ThreadHandler));
             Log("Server initialized!", LogLevel.Debug);
+            Logging = Log;
         }
 
         public void Start()
@@ -94,7 +100,7 @@ namespace TrashServer
             Log("Incoming request from: " + context.Request.RemoteEndPoint, LogLevel.Trace);
             HttpListenerRequest request = context.Request;
             HttpListenerResponse response = context.Response;
-
+            
             string responseString = "<!DOCTYPE html>\n<html>\n<body>\n\tKurwa moje pole\n</body>\n</html>";
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
 
@@ -106,8 +112,13 @@ namespace TrashServer
 
         private void Log(string message, LogLevel log = LogLevel.Info)
         {
+            ;
             if(log <= Config.LogLevel)
-                Console.WriteLine("[{0}][{1}] {2}", DateTime.Now.ToString("G").Pastel(_dateLogColor), log.ToString().Pastel(_colors[log]), message);
+                Console.WriteLine("[{0}][{1}][{2}] {3}",
+                    DateTime.Now.ToString("G").Pastel(_dateLogColor),
+                    (Task.CurrentId?.ToString() ?? "------").PadLeft(6),
+                    log.ToString().PadRight(5).Pastel(_colors[log]),
+                    message);
         }
     }
 }

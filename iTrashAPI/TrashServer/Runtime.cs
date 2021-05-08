@@ -32,6 +32,7 @@ return;
 
 pass:
 Handler handler = new Handler(config);
+handler.RequestService = new RequestManager();
 handler.Start();
 AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
 string output;
