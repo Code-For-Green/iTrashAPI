@@ -87,31 +87,29 @@ namespace TrashServer
 
         private void ThreadHandler()
         {
-            using (HttpListener listener = new HttpListener())
+            using HttpListener listener = new HttpListener();
+            listener.Prefixes.Add(Config.EndPoint);
+            listener.Start();
+            Log("Server started!");
+            try
             {
-                listener.Prefixes.Add(Config.EndPoint);
-                listener.Start();
-                Log("Server started!");
-                try
+                Log("Waiting for incoming messages", LogLevel.Debug);
+                while (IsActive)
                 {
-                    Log("Waiting for incoming messages", LogLevel.Debug);
-                    while (IsActive)
-                    {
-                        listener.BeginGetContext(new AsyncCallback(ListenerCallback),listener).AsyncWaitHandle.WaitOne();
-                        Log("Next event is preparing", LogLevel.Debug);
-                    }
+                    listener.BeginGetContext(new AsyncCallback(ListenerCallback), listener).AsyncWaitHandle.WaitOne();
+                    Log("Next event is preparing", LogLevel.Debug);
                 }
-                catch (Exception exception)
-                {
-                    Log("Thread of Handler died: " + exception.Message, LogLevel.Fatal);
-                }
-                finally
-                {
-                    IsActive = false;
-                    listener.Stop();
-                    listener.Close();
-                    Log("Thread of Handler finished", LogLevel.Info);
-                }
+            }
+            catch (Exception exception)
+            {
+                Log("Thread of Handler died: " + exception.Message, LogLevel.Fatal);
+            }
+            finally
+            {
+                IsActive = false;
+                listener.Stop();
+                listener.Close();
+                Log("Thread of Handler finished", LogLevel.Info);
             }
         }
 
@@ -131,7 +129,7 @@ namespace TrashServer
                 string key = request.Url.Segments[1];
                 Stream stream = request.InputStream;
                 stream.Read(buffer, 0, buffer.Length);
-                response.StatusCode = RequestService.StartTask(key, request.ContentEncoding.GetString(buffer), out responseString);
+                response.StatusCode = RequestService.StartTask(key, request.ContentEncoding.GetString(buffer), out responseString).GetAwaiter().GetResult();
             }
             if (response.StatusCode != (int)HttpStatusCode.OK)
                 responseString = Enum.GetName((HttpStatusCode)response.StatusCode);

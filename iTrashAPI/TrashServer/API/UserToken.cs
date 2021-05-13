@@ -9,6 +9,6 @@ namespace TrashServer.API
     public record UserToken
     {
         public string Token { get; init; }
-        public int Expirity { get; init; }
+        public long Expiration { get; init; }
     }
 }
