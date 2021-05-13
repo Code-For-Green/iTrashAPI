@@ -38,7 +38,12 @@ AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
 string output;
 while((output = Console.ReadLine()) != "exit")
 {
-
+    switch (output) 
+    {
+        case "save":
+            TrashServer.API.Database.Save();
+            break;
+    }
 }
 handler.Stop();
 

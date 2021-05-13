@@ -34,11 +34,23 @@ namespace TrashServer
 
         public Handler(Config config)
         {
-            this.Config = config;
+            Config = config;
             _commands = new();
             _listenerThread = new(new ThreadStart(ThreadHandler));
-            Log("Server initialized!", LogLevel.Debug);
             Logging = Log;
+            Log("Server initialized!", LogLevel.Debug);
+            Log("Loading database", LogLevel.Debug);
+            API.Database.Init(Config.DatabasePath);
+            try
+            {
+                API.Database.Load();
+                Log("Database loaded!", LogLevel.Debug);
+            }
+            catch(Exception exception)
+            {
+                Log("Database loading FAILED!!!", LogLevel.Fatal);
+                Log("Error log: " + exception.ToString(), LogLevel.Fatal);
+            }
         }
 
         public void Start()
@@ -57,6 +69,16 @@ namespace TrashServer
         public void Close()
         {
             Log("Force stopping server!", LogLevel.Debug);
+            try
+            {
+                API.Database.Save();
+                Log("Database saved!", LogLevel.Debug);
+            }
+            catch (Exception exception)
+            {
+                Log("Database saving FAILED!!!", LogLevel.Fatal);
+                Log("Error log: " + exception.ToString(), LogLevel.Fatal);
+            }
             if (IsActive)
                 _listenerThread.Interrupt();
             _commands.Clear();
