@@ -26,32 +26,39 @@ namespace TrashServer
 
         public int StartTask(string key, string content, out string response)
         {
-            Task task = _dictionary[key].Execute(JsonDocument.Parse(content).RootElement, out response);
-            task.Start();
-            task.Wait();
-            return task.IsCompletedSuccessfully ? 200 : 500;
+            try
+            {
+                Task task = _dictionary[key].Execute(JsonDocument.Parse(content).RootElement.GetRawText(), out response);
+                return task.IsCompletedSuccessfully ? 200 : 500;
+            }
+            catch
+            {
+                response = "Internal Server Error";
+                return 500;
+            }
         }
 
         private void FindAttribute(Type[] classes)
         {
             foreach(Type classType in classes)
             {
-                if (!classType.IsAssignableTo(_interfaceType))
-                    return;
+                if (!_interfaceType.IsAssignableFrom(classType))
+                    continue;
                 if (Attribute.GetCustomAttribute(classType, _attributeType) is not RequestKeyAttribute attribute)
                 {
-                    Handler.Logging($"There is missing attribute in {classType.Name}", LogLevel.Error);
-                    return;
+                    if(classType != typeof(IRequest))
+                        Handler.Logging($"There is missing attribute in {classType.Name}", LogLevel.Error);
+                    continue;
                 }
                 if(_dictionary.ContainsKey(attribute.Key))
                 {
                     Handler.Logging($"{classType.FullName} key is already in dictionary", LogLevel.Error);
-                    return;
+                    continue;
                 }
                 if(Activator.CreateInstance(classType) is not IRequest request)
                 {
                     Handler.Logging($"Creating instance from class {classType.FullName} failed", LogLevel.Error);
-                    return;
+                    continue;
                 }
                 _dictionary.Add(attribute.Key, request);
                 Handler.Logging($"Added {attribute.Key} to pool", LogLevel.Debug);
