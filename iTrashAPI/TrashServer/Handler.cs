@@ -36,7 +36,10 @@ namespace TrashServer
         {
             Config = config;
             _commands = new();
-            _listenerThread = new(new ThreadStart(ThreadHandler));
+            _listenerThread = new(new ThreadStart(ThreadHandler)) {
+                Name = "Listener",
+                Priority = ThreadPriority.AboveNormal
+            };
             Logging = Log;
             Log("Server initialized!", LogLevel.Debug);
             Log("Loading database", LogLevel.Debug);
@@ -87,7 +90,8 @@ namespace TrashServer
 
         private void ThreadHandler()
         {
-            using HttpListener listener = new HttpListener();
+            using HttpListener listener = new();
+            Semaphore semaphore = new(4,4);
             listener.Prefixes.Add(Config.EndPoint);
             listener.Start();
             Log("Server started!");
@@ -96,8 +100,26 @@ namespace TrashServer
                 Log("Waiting for incoming messages", LogLevel.Debug);
                 while (IsActive)
                 {
-                    listener.BeginGetContext(new AsyncCallback(ListenerCallback), listener).AsyncWaitHandle.WaitOne();
-                    Log("Next event is preparing", LogLevel.Debug);
+                    semaphore.WaitOne();
+                    Task task = listener.GetContextAsync().ContinueWith(async (t) =>
+                    {
+                        try
+                        {
+                            semaphore.Release();
+                            HttpListenerContext context = await t;
+                            await ListenerCallback(context);
+                        } 
+                        catch(Exception exception)
+                        {
+                            Log("Task of listener died: " + exception.Message, LogLevel.Error);
+                        }
+                        finally
+                        {
+                            Log("Task finished", LogLevel.Trace);
+                        }
+                    });
+                    Log("Preparing for next task", LogLevel.Trace);
+
                 }
             }
             catch (Exception exception)
@@ -113,10 +135,8 @@ namespace TrashServer
             }
         }
 
-        private void ListenerCallback(IAsyncResult result)
+        private async Task ListenerCallback(HttpListenerContext context)
         {
-            HttpListener listener = (HttpListener)result.AsyncState;
-            HttpListenerContext context = listener.EndGetContext(result);
             HttpListenerRequest request = context.Request;
             HttpListenerResponse response = context.Response;
             byte[] buffer = new byte[request.ContentLength64];
@@ -129,7 +149,7 @@ namespace TrashServer
                 string key = request.Url.Segments[1];
                 Stream stream = request.InputStream;
                 stream.Read(buffer, 0, buffer.Length);
-                response.StatusCode = RequestService.StartTask(key, request.ContentEncoding.GetString(buffer), out responseString).GetAwaiter().GetResult();
+                (response.StatusCode, responseString) = await RequestService.StartTask(key, request.ContentEncoding.GetString(buffer));
             }
             if (response.StatusCode != (int)HttpStatusCode.OK)
                 responseString = Enum.GetName((HttpStatusCode)response.StatusCode);

@@ -24,18 +24,18 @@ namespace TrashServer
 
         public bool ContainsKey(string key) => _dictionary.ContainsKey(key);
 
-        public Task<int> StartTask(string key, string content, out string response)
+        public async Task<(int, string)> StartTask(string key, string content)
         {
+            string response = "Internal Server Error";
             try
             {
-                Task task = _dictionary[key].Execute(JsonDocument.Parse(content).RootElement.GetRawText(), out response);
-                return Task.FromResult(task.IsCompletedSuccessfully ? 200 : 500);
+                response = await _dictionary[key].Execute(JsonDocument.Parse(content).RootElement.GetRawText());
+                return (200, response);
             }
             catch
             {
                 Handler.Logging("Something went wrong in task " + key, LogLevel.Error);
-                response = "Internal Server Error";
-                return Task.FromResult(500);
+                return (500, response);
             }
         }
 

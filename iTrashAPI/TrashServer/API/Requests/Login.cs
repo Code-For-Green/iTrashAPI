@@ -8,7 +8,7 @@ namespace TrashServer.API.Requests
     public class Login : IRequest
     {
         private readonly Random _random = new();
-        public Task Execute(string json, out string response)
+        public Task<string> Execute(string json)
         {
             User user = JsonSerializer.Deserialize<User>(json);
             User hashedUser = user.Hashed();
@@ -16,9 +16,8 @@ namespace TrashServer.API.Requests
                 throw new Exception("Wrong!");
             DateTime foo = DateTime.UtcNow.AddMinutes(10);
             long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
-            UserToken userToken = new UserToken { Token = GenerateToken(), Expiration = unixTime };
-            response = JsonSerializer.Serialize(userToken);
-            return Task.CompletedTask;
+            UserToken userToken = new() { Token = GenerateToken(), Expiration = unixTime };
+            return Task.FromResult(JsonSerializer.Serialize(userToken));
         }
 
         private string GenerateToken()
