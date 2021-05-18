@@ -31,10 +31,10 @@ catch (JsonException)
 return;
 
 pass:
-Handler handler = new Handler(config);
-handler.RequestService = new RequestManager();
+Handler handler = new(config);
+handler.RequestService = new();
 handler.Start();
-AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
+AppDomain.CurrentDomain.ProcessExit += new(OnProcessExit);
 string output;
 while((output = Console.ReadLine()) != "exit")
 {

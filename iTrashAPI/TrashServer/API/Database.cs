@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Linq;
 using System.Text.Json;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 
 namespace TrashServer.API
@@ -9,12 +11,15 @@ namespace TrashServer.API
     {
         private static string _userListPath;
         private static List<User> _userList;
+        private static ConcurrentQueue<User> _activeUserList;
 
-        public  static IList<User> UserList => _userList;
+        public static IList<User> UserList => _userList;
+        public static ConcurrentQueue<User> ActiveUserList => _activeUserList;
 
         public static void Init(string path)
         {
             _userListPath = Path.Combine(path, "users.json");
+            _activeUserList = new();
         }
 
         public static void Load()
