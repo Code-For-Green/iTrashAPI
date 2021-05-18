@@ -32,6 +32,10 @@ namespace TrashServer
                 response = await _dictionary[key].Execute(JsonDocument.Parse(content).RootElement.GetRawText());
                 return (200, response);
             }
+            catch(RequestException exception)
+            {
+                return ((int)exception.StatusCode, exception.Message);
+            }
             catch
             {
                 Handler.Logging("Something went wrong in task " + key, LogLevel.Error);

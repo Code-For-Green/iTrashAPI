@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -8,12 +9,13 @@ namespace TrashServer.API.Requests
     public class Login : IRequest
     {
         private readonly Random _random = new();
+
         public Task<string> Execute(string json)
         {
             User user = JsonSerializer.Deserialize<User>(json);
             User hashedUser = user.Hashed();
             if (!Database.UserList.Contains(hashedUser))
-                throw new Exception("Wrong!");
+                throw new RequestException(HttpStatusCode.Unauthorized);
             DateTime foo = DateTime.UtcNow.AddMinutes(10);
             long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
             UserToken userToken = new() { Token = GenerateToken(), Expiration = unixTime };

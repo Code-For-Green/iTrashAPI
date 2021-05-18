@@ -12,7 +12,7 @@ namespace TrashServer.API
 
         public User Hashed() => this with
         {
-            Password = Convert.ToBase64String(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(Password)))
+            Password = string.IsNullOrEmpty(Password) ? null : Convert.ToBase64String(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(Password)))
         };
     }
 }
