@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 
 namespace TrashServer.API
 {
-    public record User
+    public record User : IEquatable<User>
     {
         public int ID { get; init; }
         public string Login { get; init; }
@@ -17,6 +17,7 @@ namespace TrashServer.API
         };
 
         public virtual bool Equals(User other) => this.Login == other.Login && this.Password == other.Password;
+
         public override int GetHashCode() => throw new NotImplementedException();
     }
 }

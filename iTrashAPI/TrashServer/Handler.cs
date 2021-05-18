@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using Pastel;
+using TrashServer.API;
 
 namespace TrashServer
 {
@@ -43,11 +44,11 @@ namespace TrashServer
             Logging = Log;
             Log("Server initialized!", LogLevel.Debug);
             Log("Loading database", LogLevel.Debug);
-            API.Database.Init(Config.DatabasePath);
+            Database.Init(Config.DatabasePath);
             try
             {
-                API.Database.Load();
-                Log("Database loaded!", LogLevel.Debug);
+                Database.Load();
+                Log("Database loaded!", LogLevel.Info);
             }
             catch(Exception exception)
             {
@@ -84,6 +85,7 @@ namespace TrashServer
             }
             if (IsActive)
                 _listenerThread.Interrupt();
+            Database.Close();
             _commands.Clear();
             Config = null;
         }
@@ -129,6 +131,7 @@ namespace TrashServer
             finally
             {
                 IsActive = false;
+
                 listener.Stop();
                 listener.Close();
                 Log("Thread of Handler finished", LogLevel.Info);

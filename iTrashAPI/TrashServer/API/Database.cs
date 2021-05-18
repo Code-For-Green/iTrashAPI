@@ -4,22 +4,29 @@ using System.Text.Json;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading;
 
 namespace TrashServer.API
 {
     public static class Database
     {
         private static string _userListPath;
-        private static List<User> _userList;
-        private static ConcurrentQueue<User> _activeUserList;
+        private static Thread _thread;
 
-        public static IList<User> UserList => _userList;
-        public static ConcurrentQueue<User> ActiveUserList => _activeUserList;
+        public static ConcurrentBag<UserExtended> UserList { get; private set; }
+        public static ConcurrentQueue<UserToken> ActiveUserList { get; private set; }
 
         public static void Init(string path)
         {
+            ActiveUserList = new();
             _userListPath = Path.Combine(path, "users.json");
-            _activeUserList = new();
+            _thread = new(new ThreadStart(DatabaseHandler)) { IsBackground = true, Name = "Database" };
+            _thread.Start();
+        }
+
+        public static void Close()
+        {
+            _thread.Interrupt();
         }
 
         public static void Load()
@@ -27,18 +34,64 @@ namespace TrashServer.API
             if (File.Exists(_userListPath))
             {
                 using StreamReader reader = new(File.OpenRead(_userListPath));
-                _userList = JsonSerializer.Deserialize<List<User>>(reader.ReadToEnd());
+                IEnumerable<UserExtended> enumerable = JsonSerializer.Deserialize<List<UserExtended>>(reader.ReadToEnd());
+                UserList = new(enumerable);
             }
             else
             {
-                _userList = new();
+                UserList = new();
             }
+        }
+
+        public static bool GetUser(string token, out User user)
+        {
+            UserToken userToken = ActiveUserList.First(loggedUser => loggedUser.Token == token);
+            user = userToken?.ActiveUser;
+            return user is not null;
         }
 
         public static void Save()
         {
             using StreamWriter writer = new(File.Create(_userListPath));
-            writer.Write(JsonSerializer.Serialize(_userList));
+            List<UserExtended> users = new(UserList);
+            writer.Write(JsonSerializer.Serialize(users, new JsonSerializerOptions() {WriteIndented = true}));
+        }
+
+        private static void DatabaseHandler()
+        {
+            try
+            {
+                while(true)
+                {
+                    if (!ActiveUserList.IsEmpty)
+                        CheckExpiration();
+                    Thread.Sleep(1000);
+                }
+            }
+            catch(ThreadInterruptedException)
+            {
+
+            }
+            finally
+            {
+            
+            }
+        }
+
+        private static void CheckExpiration()
+        {
+            long time = ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds();
+            while (true)
+            {
+                if (ActiveUserList.IsEmpty)
+                    return;
+                if (!ActiveUserList.TryPeek(out UserToken user))
+                    return;
+                if (user.Expiration >= time)
+                    return;
+                if (!ActiveUserList.TryDequeue(out _))
+                    return;
+            }
         }
     }
 }

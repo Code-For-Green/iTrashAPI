@@ -8,9 +8,9 @@ namespace TrashServer.API.Requests
     {
         public Task<string> Execute(string json)
         {
-            User user = JsonSerializer.Deserialize<User>(json);
-
-            return Task.FromResult("OK");
+            if (Database.ActiveUserList.IsEmpty)
+                return Task.FromResult("{ }");
+            return Task.FromResult(JsonSerializer.Serialize(Database.ActiveUserList));
         }
     }
 }
