@@ -9,7 +9,7 @@ namespace TrashServer.API.Requests
         public Task<string> Execute(string json)
         {
             User user = JsonSerializer.Deserialize<User>(json).Hashed();
-            UserExtended userExt = new() { ID = Database.UserList.Count + 1, Login = user.Login, Password = user.Password };
+            UserExtended userExt = new(Database.UserList.Count + 1, user.Login, user.Password, null);
             Database.UserList.Add(userExt);
             return Task.FromResult("OK");
         }

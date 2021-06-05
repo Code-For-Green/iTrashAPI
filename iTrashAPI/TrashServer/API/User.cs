@@ -5,12 +5,8 @@ using System.Security.Cryptography;
 
 namespace TrashServer.API
 {
-    public record User : IEquatable<User>
+    public record User(int ID, string Login, string Password)
     {
-        public int ID { get; init; }
-        public string Login { get; init; }
-        public string Password { get; init; }
-
         public User Hashed() => this with
         {
             Password = string.IsNullOrEmpty(Password) ? null : Convert.ToBase64String(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(Password)))
